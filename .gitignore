@@ -48,7 +48,7 @@ draft
 
 # Other #
 #########
-.ipynb_checkpoints
+.ipynb_checkpoints/
 .settings/
 .eggs
 *.pptx
