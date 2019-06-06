@@ -31,15 +31,14 @@ cdef sscal_ptr sscal=<sscal_ptr>PyCObject_AsVoidPtr(fblas.sscal._cpointer)
 cdef REAL_t ONEF = <REAL_t>1.0
 cdef int ONE = 1
 
+cdef REAL_t EPS = <REAL_t>1e-8
+
 zeros = np.zeros
 
-def sif_embeddings_blas(sentences, model):
+def sif_embeddings(sentences, wv, sif_vectors):
 
-    if sentences is None or len(sentences) == 0:
-        raise RuntimeError("Sentences must be non-empty")
-
-    cdef int i, sentence_len, size = model.vector_size
-    cdef REAL_t *vectors = <REAL_t *>(np.PyArray_DATA(model.sif_vectors))
+    cdef int i, sentence_len, size = wv.vector_size
+    cdef REAL_t *vectors = <REAL_t *>(np.PyArray_DATA(sif_vectors))
     
     output = zeros((len(sentences), size), dtype=REAL)   
     cdef REAL_t *sv = <REAL_t *>(np.PyArray_DATA(output))
@@ -47,7 +46,7 @@ def sif_embeddings_blas(sentences, model):
 
     cdef str w
 
-    vlookup = model.vocab
+    vlookup = wv.vocab
     as_array = np.asarray
     
     for i in xrange(len(sentences)):
@@ -56,7 +55,7 @@ def sif_embeddings_blas(sentences, model):
         if sentence_len:
             sentence_view = <INT_t *>(np.PyArray_DATA(sentence_idx))
             sif_embeddings_blas_inner(size, sentence_view, sentence_len, i, vectors, sv)
-    return output
+    return output + EPS
 
 cdef void sif_embeddings_blas_inner(const int size, const INT_t *sentence_view, const int sentence_len, 
                                    const int sentence_idx, const REAL_t *vectors, REAL_t *summary_vectors) nogil:

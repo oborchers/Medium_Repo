@@ -4,8 +4,8 @@ import logging
 import os
 import sys
 
-from models.sif import SIF
-from models.sif import CY_ROUTINES
+from fse import SIF
+from fse.sif import CY_ROUTINES
 
 from gensim.models.word2vec import Word2Vec, LineSentence
 
@@ -74,10 +74,10 @@ if __name__ == "__main__":
 		now = datetime.now()
 		date_time = now.strftime("%m-%d-%Y_%H-%M-%S")
 
-		out_model = "data/model_"+date_time
+		out_model = "model_data/model_"+date_time
 		model.save(out_model + '.model')
 
-		out_emb = "data/sif_"+date_time
+		out_emb = "model_data/sif_"+date_time
 		np.save(out_emb, sif_emb)
 		logger.info("saved %s", out_emb)
 		

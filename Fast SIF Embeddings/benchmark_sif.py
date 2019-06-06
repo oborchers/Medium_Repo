@@ -3,24 +3,24 @@ from re import sub
 import logging
 import sys
 
-from models.sif import SIF
+np.random.seed(42)
+logger = logging.getLogger(__name__)
 
-from models.sif_variants import sif_embeddings, \
+from fse import SIF
+from fse.sif import CY_ROUTINES as CY_ROUTINES_TRAIN
+
+from fse.sif_variants import sif_embeddings, \
 	sif_embeddings_1, sif_embeddings_2, sif_embeddings_3, \
 	sif_embeddings_4, sif_embeddings_5
 
 try:
 	# Import cython functions  
-	from models.sif_variants_cy import sif_embeddings_6, \
+	from fse.sif_variants_cy import sif_embeddings_6, \
 		sif_embeddings_7, sif_embeddings_8
-	from models.sif_inner import sif_embeddings_blas
 	CY_ROUTINES = 1
 except ImportError as e:
 	CY_ROUTINES = 0
 	logger.warning("ImportError of Cython functions: %s", e)
-
-np.random.seed(42)
-logger = logging.getLogger(__name__)
 
 # Simple in-place normalization
 def normalize_text(sentences):
@@ -34,7 +34,7 @@ if __name__ == "__main__":
 	import timeit
 	import argparse
 
-	from gensim.models import Word2Vec
+	from gensim.fse import Word2Vec
 	from nltk.corpus import brown
 	from collections import OrderedDict
 	from datetime import datetime
@@ -46,7 +46,7 @@ if __name__ == "__main__":
 	    level=logging.INFO
 	)
 	logger.info("running %s", " ".join(sys.argv))
-	logger.info("using cython routines %s", CY_ROUTINES)
+	logger.info("using cython routines %s", (CY_ROUTINES & CY_ROUTINES_TRAIN))
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-len", help="Determine the length of the set to benchmark on", type=int, default=400)
@@ -67,8 +67,10 @@ if __name__ == "__main__":
 		model.train(sentences, epochs=model.epochs, total_examples=model.corpus_count)
 
 	# Precomputes sif weights and vectors
-	sif_model = SIF(model)
-	sif_model.precompute_sif_vectors(model.wv)
+	sif_model = SIF(model, alpha=1e-3, components=0)
+	sif_model.precompute_sif_vectors(model.wv, 1e-3)
+	model.wv.sif_vectors = sif_model.sif_vectors
+	model.wv.sif = sif_model.sif
 	
 	sentences_idx = [np.asarray([int(model.wv.vocab[w].index) for w in s if w in model.wv.vocab], dtype=np.intc) for s in sentences]
 
@@ -89,7 +91,7 @@ if __name__ == "__main__":
 				(sif_embeddings_6, data_idx),
 				(sif_embeddings_7, data_idx),
 				(sif_embeddings_8, data_idx),
-				(sif_embeddings_blas, data),
+				(sif_model.train, data),
 				]
 
 	for i, tup in enumerate(emb_dta):
